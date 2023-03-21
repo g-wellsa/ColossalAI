@@ -10,7 +10,7 @@ from colossalai.auto_parallel.tensor_shard.sharding_strategy import MemoryCost, 
 from colossalai.context.singleton_meta import SingletonMeta
 from colossalai.tensor.d_tensor.comm_spec import *
 from colossalai.tensor.d_tensor.layout import Layout
-from colossalai.tensor.sharding_spec import ShardingSpecException
+from colossalai.tensor.d_tensor.misc import LayoutException
 from colossalai.tensor.utils import all_gather_simulator, all_to_all_simulator, shard_simulator
 
 from .sharding_spec import ShardingSpec
@@ -22,21 +22,21 @@ __all__ = ['LayoutConverter', 'LayoutConverterOptions', 'set_layout_converting_o
 @dataclass
 class LayoutConverterOptions:
     """
-    LayoutConverterOptions is a dataclass which specifies the preferences for shape consistency.
+    LayoutConverterOptions is a dataclass which specifies the preferences for layout converting.
     """
     # TODO: layout converter option is not implemented yet
     pass
 
 
 def to_global(distributed_tensor: torch.Tensor, layout: Layout) -> torch.Tensor:
-    shape_consistency_manager = LayoutConverter()
+    layout_converter = LayoutConverter()
     global_sharding_spec = ShardingSpec(distributed_tensor.dim(), {})
     global_layout = Layout(device_mesh=layout.device_mesh,
                            device_type=layout.device_type,
                            sharding_spec=global_sharding_spec,
                            entire_shape=layout.entire_shape)
     with torch.no_grad():
-        global_tensor = shape_consistency_manager.apply(distributed_tensor, layout, global_layout)
+        global_tensor = layout_converter.apply(distributed_tensor, layout, global_layout)
     return global_tensor
 
 
@@ -145,7 +145,7 @@ class LayoutConverter(metaclass=SingletonMeta):
                                     entire_shape=source_layout.entire_shape)
 
                 valid_spec_dict[new_layout] = comm_spec
-            except ShardingSpecException:
+            except LayoutException:
                 pass
         return valid_spec_dict
 
@@ -255,7 +255,7 @@ class LayoutConverter(metaclass=SingletonMeta):
                                         device_type=source_layout.device_type,
                                         entire_shape=source_layout.entire_shape)
                     valid_spec_dict[new_layout] = comm_spec
-                except ShardingSpecException:
+                except LayoutException:
                     pass
 
         return valid_spec_dict
@@ -343,7 +343,7 @@ class LayoutConverter(metaclass=SingletonMeta):
                                         device_type=source_layout.device_type,
                                         entire_shape=source_layout.entire_shape)
                     valid_spec_dict[new_layout] = comm_spec
-                except ShardingSpecException:
+                except LayoutException:
                     pass
         return valid_spec_dict
 
